@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <select onChange="changeAnimation()" id="one">
+        <option>Choose</option>
+        <!-- <option value="default">Default</option>
+        <option value="idle">Idle</option>
+        <option value="walk">Walk</option>
+        <option value="run">Run</option> -->
+    </select>
+
+    <script type="text/javascript" src="js/three.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/inflate.min.js"></script>
+    <script src="js/FBXLoader.js"></script>
+
+    <script>
+
+        var scene, renderer, camera, light, gridHelper, controls, raycaster, mouse, INTERSECTED;
+        var clock = new THREE.Clock();
+        var mixer, elephantObject;
+        var mixers = [];
+        var objects = [];
+
+        init();
+        render();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene()
+            scene.background = new THREE.Color(0xffffff);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+            camera.position.set(0, 500, 1400);
+            camera.lookAt(0, 200, 0);
+
+            light = new THREE.DirectionalLight("white", 2);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+
+            var array = gridHelper.geometry.attributes.color.array;
+
+            for (var i = 0; i < array.length; i += 60) {
+
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+
+            var loader = new THREE.FBXLoader();
+            loader.load('models/Elephant/all_final.fbx', function (object) {
+                elephantObject = object;
+                console.log(object.animations.length);
+                console.log(object.animations[0]);
+                console.log(object.children.length);
+                console.log(object.children[0]);
+                console.log(object.children[1]);
+                console.log(object.children[2]);
+                console.log(object.children[0].name);
+
+                var select = document.getElementById("one");
+                var optionsArray = object.children;
+                for(var i = 0; i < optionsArray.length; i++){
+                    var opt = optionsArray[i].name;
+                    var el = document.createElement("option");
+                    el.textContent = opt;
+                    el.value = opt;
+                    select.appendChild(el);
+                }
+
+
+                object.children[0].visible = false;
+                object.children[1].visible = false;
+                object.children[2].visible = false;
+
+
+
+                mixer = new THREE.AnimationMixer(object);
+                mixers.push(mixer);
+                var clips = object.animations;
+                var action = mixer.clipAction(object.animations[0]);
+                action.play();
+
+
+                // object.scale.set(10, 10, 10);
+                scene.add(object);
+            });
+
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+
+
+        }
+
+        // function changeAnimation() {
+        //     var selectedAnimation = document.getElementById("one").value;
+        //     if (selectedAnimation == "idle") {
+        //         elephantObject.children[0].visible = true;
+        //         elephantObject.children[1].visible = false;
+        //         elephantObject.children[2].visible = false;
+
+        //     } else if (selectedAnimation == "walk") {
+        //         elephantObject.children[0].visible = false;
+        //         elephantObject.children[1].visible = true;
+        //         elephantObject.children[2].visible = false;
+
+        //     } else if (selectedAnimation == "run") {
+        //         elephantObject.children[0].visible = false;
+        //         elephantObject.children[1].visible = false;
+        //         elephantObject.children[2].visible = true;
+
+        //     }
+        //     else {
+        //         elephantObject.children[0].visible = false;
+        //         elephantObject.children[1].visible = false;
+        //         elephantObject.children[2].visible = false;
+        //     }
+        // }
+
+        function changeAnimation() {
+            var selectedAnimation = document.getElementById("one").value;
+            if (selectedAnimation == "idle") {
+                elephantObject.children[0].visible = true;
+                elephantObject.children[1].visible = false;
+                elephantObject.children[2].visible = false;
+
+            } else if (selectedAnimation == "walk") {
+                elephantObject.children[0].visible = false;
+                elephantObject.children[1].visible = true;
+                elephantObject.children[2].visible = false;
+
+            } else if (selectedAnimation == "run") {
+                elephantObject.children[0].visible = false;
+                elephantObject.children[1].visible = false;
+                elephantObject.children[2].visible = true;
+
+            }
+            else {
+                elephantObject.children[0].visible = false;
+                elephantObject.children[1].visible = false;
+                elephantObject.children[2].visible = false;
+            }
+        }
+
+
+
+        function animate() {
+            requestAnimationFrame(animate);
+            var delta = clock.getDelta();
+            // if (mixer) mixer.update(delta);
+            if (mixers.length > 0) {
+                for (var i = 0; i < mixers.length; i++) {
+                    mixers[i].update(delta);
+                }
+            }
+            renderer.render(scene, camera);
+            // transformControls.updateMatrixWorld();
+            // transformControls.addEventListener('change', render);
+            // stats.update();
+        }
+
+
+
+        function render() {
+
+            renderer.render(scene, camera);
+
+        }
+
+
+    </script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <select onChange="changeAnimation()" id="one">
+        <option>Choose</option>
+        <!-- <option value="default">Default</option>
+        <option value="idle">Idle</option>
+        <option value="walk">Walk</option>
+        <option value="run">Run</option> -->
+    </select>
+
+    <script type="text/javascript" src="js/three.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/inflate.min.js"></script>
+    <script src="js/FBXLoader.js"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+
+    <script>
+        var scene, stats , renderer, camera, light, gridHelper, controls, raycaster, mouse, INTERSECTED , mixer , actions , activeAction , previousAction;
+        var clock = new THREE.Clock();
+        var sambaAnimations;
+        var mixers = [];
+        var api={};
+
+        init();
+        render();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene()
+            scene.background = new THREE.Color(0xffffff);
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            document.body.appendChild(renderer.domElement);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+            camera.position.set(0, 500, 1400);
+            camera.lookAt(0, 200, 0);
+
+            light = new THREE.DirectionalLight("white", 2);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+
+            var array = gridHelper.geometry.attributes.color.array;
+
+            for (var i = 0; i < array.length; i += 60) {
+
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+             
+            // stats
+				stats = new Stats();
+				document.body.appendChild( stats.dom );
+            
+            
+            
+            var loader = new THREE.FBXLoader();
+            loader.load('models/Samba_Dancing.fbx', function(object) {
+                console.log(object);
+                scene.add(object);
+                sambaAnimations = object.animations;
+                createGUI(object,sambaAnimations); 
+            });
+
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+
+
+        }
+        
+        
+        function createGUI( model, animations ) {
+				var states = [];
+				gui = new dat.GUI();
+				mixer = new THREE.AnimationMixer( model );
+				actions = {};
+                var defaultAction;
+				for ( var i = 0; i < animations.length; i++ ) {
+					var clip = animations[ i ];
+					var action = mixer.clipAction( clip );
+                    
+                    if(i == 0){
+                        defaultAction=clip.name;
+                        api['state']=defaultAction;
+                    }
+                    states[i]=clip.name;
+					actions[ clip.name ] = action;
+							action.clampWhenFinished = true;
+							action.loop = THREE.LoopOnce;
+				}
+				// states
+				var statesFolder = gui.addFolder( 'States' );
+				var clipCtrl = statesFolder.add( api, 'state' ).options( states );
+				clipCtrl.onChange( function() {
+					fadeToAction( api.state, 0.5 );
+				} );
+				statesFolder.open();
+				
+				activeAction = actions[defaultAction];
+				activeAction.play();
+				
+			}
+
+
+        function animate() {
+				var dt = clock.getDelta();
+				if ( mixer ) mixer.update( dt );
+				requestAnimationFrame( animate );
+				renderer.render( scene, camera );
+				stats.update();
+			}
+        
+        function render() {
+
+            renderer.render(scene, camera);
+
+        }
+        function changeAnimation() {
+             var selectedAnimation = document.getElementById("one").value;
+             fadeToAction(selectedAnimation,0.5);
+         }
+        function fadeToAction( name, duration ) {
+				previousAction = activeAction;
+				activeAction = actions[ name ];
+				if ( previousAction !== activeAction ) {
+					previousAction.fadeOut( duration );
+				}
+				activeAction.reset().setEffectiveTimeScale( 1 ).setEffectiveWeight( 1 ).fadeIn( duration ).play();
+			}
+         
+        
+        
+
+    </script>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <select onChange="changeAnimation()" id="select">
+        <option>Choose</option>
+    </select>
+
+    <script type="text/javascript" src="js/three.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/inflate.min.js"></script>
+    <script src="js/FBXLoader.js"></script>
+    <script src="js/dat.gui.min.js"></script>
+
+    <script>
+        var scene, stats, renderer, camera, light, gridHelper, controls, raycaster, mouse, INTERSECTED, mixer, actions, activeAction, previousAction;
+        var clock = new THREE.Clock();
+        var selectedObject;
+        var mixers = [];
+        var objects = [];
+        var api = {};
+        var animationsMap={};
+        init();
+        render();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene()
+            scene.background = new THREE.Color(0xffffff);
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            document.body.appendChild(renderer.domElement);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 3000);
+            camera.position.set(0, 500, 1400);
+            camera.lookAt(0, 200, 0);
+            light = new THREE.DirectionalLight("white", 2);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+            var array = gridHelper.geometry.attributes.color.array;
+            for (var i = 0; i < array.length; i += 60) {
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+            var loader = new THREE.FBXLoader();
+            
+            loader.load('models/burger/burger.fbx', function(object) {
+                console.log(object.animations.length);
+                object.createdName=makeid(5);
+                animationsMap[object.createdName]=object.animations;
+                object.scale.set(10, 10, 10);
+                object.position.set(200, 0, 0);
+                scene.add(object);
+                objects.push(object);
+                createGUI(object, object.animations);
+            });
+
+            loader.load('models/burger/Samba_Dancing.fbx', function(object) {
+                object.createdName=makeid(5);
+                animationsMap[object.createdName]=object.animations;
+                scene.add(object);
+                console.log(object.animations.length);
+                objects.push(object);
+                createGUI(object, object.animations);
+            });
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+            document.addEventListener('click', onDocumentMouseMove);
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+        }
+
+        function createGUI(model, animations) {
+            var states = [];
+            // animations = selectedObject.animations;
+            mixer = new THREE.AnimationMixer(model);
+            mixers.push(mixer);
+            actions = {};
+            var defaultAction;
+            var select = document.getElementById("select");
+            select.innerHTML = "";
+            for (var i = 0; i < animations.length; i++) {
+                var clip = animations[i];
+                var action = mixer.clipAction(clip);
+                if (i == 0) {
+                    defaultAction = clip.name;
+                    api['state'] = defaultAction;
+                }
+
+                states[i] = clip.name;
+                actions[clip.name] = action;
+                action.clampWhenFinished = true;
+                action.loop = THREE.LoopOnce;
+                var opt = animations[i].name;
+                var el = document.createElement("option");
+                el.textContent = opt;
+                el.value = opt;
+                select.appendChild(el);
+            }
+            activeAction = actions[defaultAction];
+            activeAction.play();
+        }
+
+        function changeAnimation() {
+            var selectedAnimation = document.getElementById("select").value;
+            fadeToAction(selectedAnimation, 0.5);
+        }
+
+        function fadeToAction(name, duration) {
+            previousAction = activeAction;
+            activeAction = actions[name];
+            if (previousAction !== activeAction) {
+                previousAction.fadeOut(duration);
+            }
+            activeAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(duration).play();
+        }
+
+        function onDocumentMouseMove(event) {
+            event.preventDefault();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            camera.lookAt(scene.position);
+            camera.updateMatrixWorld();
+            raycaster.setFromCamera(mouse, camera, objects);
+            var intersects = raycaster.intersectObjects(objects, true);
+            if (intersects.length > 0) {
+                if (INTERSECTED != intersects[0].object) {
+                    if (INTERSECTED); {
+                        INTERSECTED = intersects[0].object;
+                    }
+                    console.log(INTERSECTED);
+                    animate();
+                    selectedObject = INTERSECTED;
+                    setDropDown(animationsMap[selectedObject.parent.createdName]);
+                    console.log(selectedObject);
+                } else {
+                    if (INTERSECTED); {
+                        INTERSECTED = null;
+                    }
+                }
+            }
+        }
+        
+        function setDropDown(animations){
+            var select = document.getElementById("select");
+            select.innerHTML = "";
+            for (var i = 0; i < animations.length; i++) {
+                var opt = animations[i].name;
+                var el = document.createElement("option");
+                el.textContent = opt;
+                el.value = opt;
+                select.appendChild(el);
+            }
+        }
+        
+        function makeid(id) {
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            for (var i = 0; i < id; i++)
+                text += possible.charAt(Math.floor(Math.random() * id));
+
+            return text;
+        }
+
+        function animate() {
+            var delta = clock.getDelta();
+            if (mixers.length > 0) {
+                for (var i = 0; i < mixers.length; i++) {
+                    mixers[i].update(delta);
+                }
+            }
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+            //stats.update();
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+
+
+
+</body>
+
+</html>

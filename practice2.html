@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+
+	<!-- <style>
+        body {
+            margin: 0;
+        }
+    </style> -->
+</head>
+
+<body>
+	<button id="playAnimation" onclick="playAnimation()">Play Animation</button>
+	<button id="stopAnimation" onclick="stopAnimation()">Stop Animation</button>
+
+	<script src="js/three.js"></script>
+	<script src="js/OrbitControls.js"></script>
+	<script src="js/TransformControls.js"></script>
+	<script src="js/inflate.min.js"></script>
+	<script src="js/FBXLoader.js"></script>
+
+	<script>
+
+		var scene, renderer, camera, light, gridHelper, controls, raycaster, mouse, INTERSECTED, animationObj, group, objAnimation, action, clip, clips;
+		var clock = new THREE.Clock();
+		var mixer;
+		var mixers = [];
+		var objects = [];
+		var names = [];
+
+		init();
+		render();
+		animate();
+
+		function init() {
+			scene = new THREE.Scene()
+			scene.background = new THREE.Color(0xffffff);
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 3000);
+			camera.position.set(0, 500, 1400);
+			camera.lookAt(0, 200, 0);
+
+			light = new THREE.DirectionalLight("white", 1);
+			light.position.set(1, 1, 1);
+			scene.add(light);
+
+			gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+			scene.add(gridHelper);
+
+			var array = gridHelper.geometry.attributes.color.array;
+
+			for (var i = 0; i < array.length; i += 60) {
+
+				for (var j = 0; j < 12; j++) {
+					array[i + j] = 0.5;
+				}
+			}
+
+			group = new THREE.Object3D();
+
+
+			var loader = new THREE.FBXLoader();
+			loader.load('models/fbxModels/burger/Samba Dancing.fbx', function (object) {
+				animationObj = object;
+				// mixer = new THREE.AnimationMixer(object);
+				// mixers.push(mixer);
+				// var action = mixer.clipAction(object.animations[0]);
+				// action.play();
+				// action.halt(10);
+
+				objAnimation = object.animations;
+				group = new THREE.Object3D();
+				var objLength = [];
+				group.animations = objAnimation;
+
+				for (var c = 0; c < object.children.length; c++) {
+					objLength.push(object.children[c]);
+				}
+
+				for (var c = 0; c < objLength.length; c++) {
+
+					group.add(objLength[c]);
+
+				}
+				group.name = "Samba";
+				id = makeid(5);
+				names.push(group.name);
+				console.log(group.rotation);
+				//console.log("Cube object:", group.name);
+				scene.add(group);
+				console.log("Plugxr Group", group);;
+				objects.push(group);
+
+			});
+
+			loader.load('models/fbxModels/cheetah/tiger_002.fbx', function (object) {
+				animationObj = object;
+				// mixer = new THREE.AnimationMixer(object);
+				// mixers.push(mixer);
+				// var action = mixer.clipAction(object.animations[0]);
+				// action.play();
+				// action.halt(20);
+
+				objAnimation = object.animations;
+				group = new THREE.Object3D();
+				var objLength = [];
+				group.animations = objAnimation;
+
+				for (var c = 0; c < object.children.length; c++) {
+					objLength.push(object.children[c]);
+				}
+
+				for (var c = 0; c < objLength.length; c++) {
+
+					group.add(objLength[c]);
+
+				}
+				group.name = "Tiger";
+				id = makeid(5);
+				names.push(group.name);
+				console.log(group.rotation);
+				//console.log("Cube object:", group.name);
+				scene.add(group);
+				console.log("Plugxr Group", group);;
+				objects.push(group);
+
+			});
+
+			// loader.load('models/fbxModels/dragon/Dragon_Baked_Actions_fbx_7.4_binary.fbx', function (object) {
+			// 	animationObj = object;
+
+			// 	// mixer = new THREE.AnimationMixer(object);
+			// 	// mixers.push(mixer);
+			// 	// var action = mixer.clipAction(object.animations[0]);
+			// 	// action.play();
+
+			// 	objAnimation = object.animations;
+			// 	group = new THREE.Object3D();
+			// 	var objLength = [];
+			// 	group.animations = objAnimation;
+
+			// 	for (var c = 0; c < object.children.length; c++) {
+			// 		objLength.push(object.children[c]);
+			// 	}
+
+			// 	for (var c = 0; c < objLength.length; c++) {
+
+			// 		group.add(objLength[c]);
+
+			// 	}
+			// 	group.name = "Dragon";
+			// 	id = makeid(5);
+			// 	names.push(group.name);
+			// 	console.log(names);
+			// 	console.log(group.rotation);
+			// 	group.scale.set(0.05, 0.05, 0.05);
+			// 	//console.log("Cube object:", group.name);
+			// 	scene.add(group);
+			// 	console.log("Plugxr Group", group);;
+			// 	objects.push(group);
+
+			// });
+
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+			controls.update();
+			controls.addEventListener('change', render);
+
+			transformControls = new THREE.TransformControls(camera, renderer.domElement);
+			transformControls.addEventListener('change', render);
+
+			transformControls.addEventListener('dragging-changed', function (event) {
+				controls.enabled = !event.value;
+
+			});
+
+			scene.add(transformControls);
+			window.addEventListener('resize', onWindowResize, false);
+			document.addEventListener('click', onDocumentMouseMove);
+
+			raycaster = new THREE.Raycaster();
+			mouse = new THREE.Vector2();
+
+		}
+
+
+		function onDocumentMouseMove(event) {
+
+			event.preventDefault();
+
+
+			mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+			mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+			camera.lookAt(scene.position);
+
+			camera.updateMatrixWorld();
+
+			raycaster.setFromCamera(mouse, camera, objects);
+			var intersects = raycaster.intersectObjects(objects, true);
+
+			if (intersects.length > 0) {
+
+				if (INTERSECTED != intersects[0].object) {
+
+					if (INTERSECTED);
+					{
+						INTERSECTED = intersects[0].object;
+					}
+
+					if (intersects[0].object.parent.type == "Object3D") {
+						id = intersects[0].object.parent.name;
+						var object3d = scene.getObjectByName(id, true);
+						transformControls.attach(object3d);
+						console.log(transformControls.object);
+						action.stop();
+						// console.log(action);
+						// for (var i = 0; i < animationObj.animations.length; i++) {
+						//     action = mixer.clipAction(animationObj.animations[i]);
+						// action.stop();
+						// }
+
+						//console.log( object3d);
+
+						//console.log(intersects[0].object.parent.name);
+					} else {
+						transformControls.attach(INTERSECTED);
+
+						//console.log("not a group object");
+					}
+					//console.log(INTERSECTED);
+					animate();
+
+					// transformControls.attach(INTERSECTED);
+
+					//scene.add(transformControls);
+					// id = transformControls.children[0].object.name;
+
+				} else {
+
+					if (INTERSECTED);
+					{
+						INTERSECTED = null;
+					}
+				}
+			}
+		}
+
+		function makeid(id) {
+			var text = "";
+			var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+			for (var i = 0; i < id; i++)
+				text += possible.charAt(Math.floor(Math.random() * id));
+
+			return text;
+		}
+
+		function stopAnimation() {
+
+			// var one = [];
+			// console.log(objects);
+			for (j = 0; j < names.length; j++) {
+				var object3d = scene.getObjectByName(names[j], true);
+				console.log(object3d);
+				// mixer = new THREE.AnimationMixer(object3d);
+				// mixers.push(mixer);
+				for (c = 0; c < mixers.length; c++) {
+					mixer.stopAllAction();
+					console.log(mixers);
+				}
+
+
+				for (var i = 0; i < object3d.animations.length; i++) {
+					//action = mixer.clipAction(object3d.animations[0]);
+
+
+					//mixer.stopAllAction();
+					//action.paused = true;
+
+					console.log(action);
+				}
+
+
+			}
+
+			// for (j = 0; j < objects.length; j++) {
+			// 	//one.push(objects[j]);
+			// 	mixer = new THREE.AnimationMixer(objects[j]);
+			// 	mixers.push(mixer);
+			// 	for (var i = 0; i < objects[j].animations.length; i++) {
+			// 		action = mixer.clipAction(objects[j].animations[i]);
+			// 		action.play();
+			// 	}
+			// 	action.stop();
+			// }
+
+		}
+
+		function playAnimation() {
+
+			// var one = [];
+			// console.log(objects);
+			for (j = 0; j < names.length; j++) {
+				var object3d = scene.getObjectByName(names[j], true);
+				console.log(object3d);
+				mixer = new THREE.AnimationMixer(object3d);
+				mixers.push(mixer);
+				for (var i = 0; i < object3d.animations.length; i++) {
+					action = mixer.clipAction(object3d.animations[0]);
+					action.play();
+					// action.halt(20);
+					console.log(action);
+				}
+			}
+		}
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize(window.innerWidth, window.innerHeight);
+
+			render();
+
+		}
+
+
+		function animate() {
+			requestAnimationFrame(animate);
+			var delta = clock.getDelta();
+			// if (mixer) mixer.update(delta);
+			if (mixers.length > 0) {
+				for (var i = 0; i < mixers.length; i++) {
+					mixers[i].update(delta);
+				}
+			}
+			renderer.render(scene, camera);
+			transformControls.updateMatrixWorld();
+			transformControls.addEventListener('change', render);
+		}
+
+		function render() {
+
+			renderer.render(scene, camera);
+			// animate();
+
+		}
+
+
+	</script>
+
+
+
+</body>
+
+</html>

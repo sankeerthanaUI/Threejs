@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Line</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+</head>
+
+<body>
+
+    <div id="container"></div>
+
+    <script src="js/three.js"></script>
+
+    <script src="js/DragControls.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/TransformControls.js"></script>
+
+    <script>
+        var container;
+        var camera, scene, renderer;
+        var splineHelperObjects = [];
+        var splinePointsLength = 3;
+        var positions = [];
+        var point = new THREE.Vector3();
+        var transformControl;
+        var ARC_SEGMENTS = 100;
+        var splines = {};
+
+        init();
+        animate();
+
+        function init() {
+            container = document.getElementById('container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.set(0, 500, 1400);
+            scene.add(camera);
+
+            scene.add(new THREE.AmbientLight(0xf0f0f0));
+            var light = new THREE.SpotLight(0xffffff, 1.5);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+
+            var array = gridHelper.geometry.attributes.color.array;
+
+            for (var i = 0; i < array.length; i += 60) {
+
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+
+            transformControl = new THREE.TransformControls(camera, renderer.domElement);
+            transformControl.addEventListener('change', render);
+            transformControl.addEventListener('dragging-changed', function (event) {
+                controls.enabled = !event.value;
+            });
+            scene.add(transformControl);
+
+            transformControl.addEventListener('objectChange', function () {
+                updateSplineOutline();
+            });
+
+            var dragcontrols = new THREE.DragControls(splineHelperObjects, camera, renderer.domElement);
+            dragcontrols.enabled = false;
+            dragcontrols.addEventListener('hoveron', function (event) {
+                transformControl.attach(event.object);
+            });
+
+
+			/*******
+			 * Curves
+			 *********/
+            for (var i = 0; i < splinePointsLength; i++) {
+                addSplineObject(positions[i]);
+            }
+            // positions = [];
+            for (var i = 0; i < splinePointsLength; i++) {
+                positions.push(splineHelperObjects[i].position);
+                console.log(splineHelperObjects[i].position);
+            }
+            console.log(splineHelperObjects);
+
+            var geometry = new THREE.BufferGeometry();
+            geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(ARC_SEGMENTS * 3), 3));
+            var curve = new THREE.CatmullRomCurve3(positions);
+            //console.log(curve);
+            //curve.curveType = 'catmullrom';
+            curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
+                color: 0xff0000,
+                opacity: 1
+            }));
+
+
+            splines.catmullrom = curve;
+            for (var k in splines) {
+                var spline = splines[k];
+                scene.add(spline.mesh);
+            }
+            console.log(splines);
+
+            load([new THREE.Vector3(-50, 0, 0),
+            new THREE.Vector3(0, 50, 0),
+            new THREE.Vector3(50, 0, 0),
+            ]);
+        }
+
+        function addSplineObject() {
+            var geometry = new THREE.BoxBufferGeometry(10, 10, 10);
+            var material = new THREE.LineBasicMaterial({ color: Math.random() * 0xffffff });
+            var object = new THREE.Mesh(geometry, material);
+            scene.add(object);
+            splineHelperObjects.push(object);
+        }
+
+
+        function updateSplineOutline() {
+            for (var k in splines) {
+                var spline = splines[k];
+                //console.log("data");
+                var splineMesh = spline.mesh;
+                var position = splineMesh.geometry.attributes.position;
+                for (var i = 0; i < ARC_SEGMENTS; i++) {
+                    var t = i / (ARC_SEGMENTS - 1);
+                    spline.getPoint(t, point);
+                    position.setXYZ(i, point.x, point.y, point.z);
+                    //console.log(position);
+                }
+                position.needsUpdate = true;
+            }
+        }
+
+        function load(new_positions) {
+            console.log(positions);
+            for (var i = 0; i < positions.length; i++) {
+                positions[i].copy(new_positions[i]);
+            }
+            updateSplineOutline();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            render();
+        }
+        console.log(positions);
+
+        function render() {
+
+            renderer.render(scene, camera);
+        }
+    </script>
+
+</body>
+
+</html>

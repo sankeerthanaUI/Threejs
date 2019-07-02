@@ -27,7 +27,7 @@
 
     <script>
 
-        var containe, curve, spline, t, INTERSECTED, raycaster, mouse, object;
+        var container, curve, spline, t, INTERSECTED, raycaster, mouse, object;
         var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
         var splineHelperObjects = [];
         var splinePointsLength = 3;
@@ -186,12 +186,13 @@
             }
         }
 
+
         var curveWithPoints = (function () {
             var executed = false;
             return function () {
                 if (!executed) {
                     executed = true;
-                    // do something
+                    // // // do something
                     for (var i = 0; i < splinePointsLength; i++) {
                         addSplineObject();
                     }
@@ -201,23 +202,23 @@
                         //console.log(positions);
                     }
 
-                    var geometry = new THREE.BufferGeometry();
-                    var vertices = new Float32Array(ARC_SEGMENTS * 3); //3 vertices per point
-                    // itemSize = 3 because there are 3 values (components) per vertex
-                    geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    // var geometry = new THREE.BufferGeometry();
+                    // var vertices = new Float32Array(ARC_SEGMENTS * 3); //3 vertices per point
+                    // // itemSize = 3 because there are 3 values (components) per vertex
+                    // geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
 
-                    curve = new THREE.CatmullRomCurve3(positions);
-                    console.log(positions);
-                    curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
-                        color: 0xff0000,
-                        opacity: 1
-                    }));
+                    // curve = new THREE.CatmullRomCurve3(positions);
+                    // console.log(positions);
+                    // curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
+                    //     color: 0xff0000,
+                    //     opacity: 1
+                    // }));
 
-                    splines.Catmullrom = curve;
-                    for (var k in splines) {
-                        spline = splines[k];
-                        scene.add(spline.mesh);
-                    }
+                    // splines.Catmullrom = curve;
+                    // for (var k in splines) {
+                    //     spline = splines[k];
+                    //     scene.add(spline.mesh);
+                    // }
                 }
             };
         })();
@@ -226,13 +227,42 @@
 
             curveWithPoints();
 
-                var intersectPosition = INTERSECTED.position
-                curveLoad = load([new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z),
-                //new THREE.Vector3(-200, 0, 0),
-                new THREE.Vector3(0, 200, 0),
-                new THREE.Vector3(200, 0, 0),
-                ]);
+            // for (var i = 0; i < splinePointsLength; i++) {
+            //     addSplineObject();
+            // }
 
+            // for (var i = 0; i < splinePointsLength; i++) {
+            //     positions.push(splineHelperObjects[i].position);
+            //     positions.needsUpdate = true;
+            //     console.log(positions);
+            // }
+
+            var geometry = new THREE.BufferGeometry();
+            var vertices = new Float32Array(ARC_SEGMENTS * 3); //3 vertices per point
+            // itemSize = 3 because there are 3 values (components) per vertex
+            geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+            curve = new THREE.CatmullRomCurve3(positions);
+            curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
+                color: 0xff0000,
+                opacity: 1
+            }));
+
+            splines.Catmullrom = curve;
+
+            for (var k in splines) {
+                spline = splines[k];
+                scene.add(spline.mesh);
+            }
+
+
+            var intersectPosition = INTERSECTED.position;
+            load([new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z),
+            //new THREE.Vector3(-200, 0, 0),
+            new THREE.Vector3(0, 200, 0),
+            new THREE.Vector3(200, 0, 0),
+            ]);
+            console.log(Object.keys(splines).length);
         }
 
 
@@ -241,6 +271,7 @@
             moveInterval = setInterval(function () {
 
                 pt = spline.getPoint(t);
+
                 selectedCube.position.set(pt.x, pt.y, pt.z);
                 t = (t >= 1) ? 0 : t += 0.002;
 
@@ -249,9 +280,11 @@
 
 
         function load(new_positions) {
+
             for (var i = 0; i < positions.length; i++) {
                 positions[i].copy(new_positions[i]);
             }
+
             updateSplineOutline();
         }
 

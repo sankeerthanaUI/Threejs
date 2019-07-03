@@ -29,7 +29,7 @@
 
         var container, curve, spline, t, INTERSECTED, raycaster, mouse, object;
         var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
-        var splineHelperObjects = [];
+      //  var splineHelperObjects = [];
         var splinePointsLength = 3;
         var positions = [];
         var ARC_SEGMENTS = 100;
@@ -161,7 +161,7 @@
             }
         }
 
-        function addSplineObject() {
+        function addSplineObject(splineHelperObjects) {
             var geometry2 = new THREE.BoxBufferGeometry(10, 10, 10);
             var material2 = new THREE.LineBasicMaterial({ color: Math.random() * 0xffffff });
             object = new THREE.Mesh(geometry2, material2);
@@ -193,8 +193,9 @@
                 if (!executed) {
                     executed = true;
                     // // // do something
+                    var splineHelperObjects = [];
                     for (var i = 0; i < splinePointsLength; i++) {
-                        addSplineObject();
+                        addSplineObject(splineHelperObjects);
                     }
 
                     for (var i = 0; i < splinePointsLength; i++) {

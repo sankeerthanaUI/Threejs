@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Line</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <style>
+        body #container {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <button onclick="loadCurve()">Load Curve</button>
+    <div id="container"></div>
+
+    <script src="js/three.js"></script>
+
+    <script src="js/DragControls.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/TransformControls.js"></script>
+
+    <script>
+        
+        var container, curve, curveObject, t, INTERSECTED, raycaster, mouse;
+        var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
+        var noOfPoints = 3;
+        var x1 = -200;
+        var y1 = 0;
+        var z1 = 200;
+        var x2 = 0;
+        var y2 = 0;
+        var z2 = 0;
+        var y3 = 0;
+        var x3 = 200;
+        var y3 = 0;
+        var z3 = 200;
+        var ARC_SEGMENTS = 100;
+        var point = new THREE.Vector3();
+        var boxGeometry = new THREE.BoxBufferGeometry( 20, 20, 20 );
+        var curveObjects = [];
+        var objects = [];
+        var pt;
+        init();
+        animate();
+        function init() {
+            container = document.getElementById('container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.set(0, 500, 1400);
+            scene.add(camera);
+            scene.add(new THREE.AmbientLight(0xf0f0f0));
+            var light = new THREE.SpotLight(0xffffff, 1.5);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+            var array = gridHelper.geometry.attributes.color.array;
+            for (var i = 0; i < array.length; i += 60) {
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+            //Create a closed wavey loop
+               
+        }
+        
+        function loadCurve(){
+            
+            /*******
+				 * Curves
+				 *********/
+                var positions = [];
+                var cubeObjects = [];
+				for ( var i = 0; i < noOfPoints; i ++ ) {
+					addCubeObject(cubeObjects);
+				}
+				positions = [];
+				for ( var i = 0; i < noOfPoints; i ++ ) {
+					positions.push( cubeObjects[ i ].position );
+				}
+            x1 = x1+50;
+            y1 = y1+50;
+            z1 = z1-50;
+            
+            x2 = x2+50;
+            y2 = y2+50;
+            z2 = z2-50;
+            
+            x3 = x3+50;
+            y3 = y3+50;
+            z3 = z3-50;
+            
+                var geometry = new THREE.BufferGeometry();
+				geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( ARC_SEGMENTS * 3 ), 3 ) );
+				var curve = new THREE.CatmullRomCurve3( positions );
+				curve.curveType = 'catmullrom';
+				curve.mesh = new THREE.Line( geometry.clone(), new THREE.MeshLambertMaterial( {
+					color: 0xff0000,
+					opacity: 0.35
+				} ) );
+				curve.mesh.castShadow = true;
+                curveObjects.push(curve);
+                scene.add(curve.mesh);
+                    
+                load( [ new THREE.Vector3( x1, y1, z1 ), new THREE.Vector3( x2, y2, z2 ),new THREE.Vector3( x3, y3, z3 )] , curve, positions);
+                
+        }
+        
+        function addCubeObject(cubeObjects) {
+				var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+				var object = new THREE.Mesh( boxGeometry.clone(), material );
+				object.castShadow = true;
+				object.receiveShadow = true;
+				scene.add( object );
+				cubeObjects.push( object );
+			}
+        
+        function load( new_positions , newCurve, old_positions) {
+				
+				for ( var i = 0; i < old_positions.length; i ++ ) {
+					old_positions[ i ].copy( new_positions[ i ] );
+				}
+				updateCubeOutline(newCurve);
+        }
+        
+        function updateCubeOutline(newCurve) {
+					
+					var newCurveMesh = newCurve.mesh;
+					var position = newCurveMesh.geometry.attributes.position;
+					for ( var i = 0; i < ARC_SEGMENTS; i ++ ) {
+						var t = i / ( ARC_SEGMENTS - 1 );
+						newCurve.getPoint( t, point );
+						position.setXYZ( i, point.x, point.y, point.z );
+					}
+					position.needsUpdate = true;
+				
+			}
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            render();
+        }
+        function render() {
+            renderer.render(scene, camera);
+        }
+        
+        </script>
+
+</body>
+
+</html>

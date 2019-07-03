@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Line</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <style>
+        body #container {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <button onclick="loadCurve()">Load Curve</button>
+    <button onclick="moveCube()">Move Cube</button>
+    <div id="container"></div>
+
+    <script src="js/three.js"></script>
+
+    <script src="js/DragControls.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/TransformControls.js"></script>
+
+    <script>
+        var container, curve,currentCurve, t, INTERSECTED, raycaster, mouse, object;
+        var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
+        var curveObjects = [];
+        var allSmallCubeObjects = [];
+        var boxGeometry = new THREE.BoxBufferGeometry(10, 10, 10);
+        var noOfPoints = 3;
+        //var positions = [];
+        var ARC_SEGMENTS = 100;
+        var point = new THREE.Vector3();
+        var objects = [];
+        var pt;
+        init();
+        animate();
+        function init() {
+            container = document.getElementById('container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.set(0, 500, 1400);
+            scene.add(camera);
+            scene.add(new THREE.AmbientLight(0xf0f0f0));
+            var light = new THREE.SpotLight(0xffffff, 1.5);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+            var array = gridHelper.geometry.attributes.color.array;
+            for (var i = 0; i < array.length; i += 60) {
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+            transformControls = new THREE.TransformControls(camera, renderer.domElement,scene);
+            transformControls.addEventListener('change', render);
+            transformControls.addEventListener('dragging-changed', function (event) {
+                controls.enabled = !event.value;
+            });
+            scene.add(transformControls);
+            transformControls.addEventListener('objectChange', function () {
+                updateSplineOutline();
+            });
+            var dragcontrols = new THREE.DragControls(allSmallCubeObjects, camera, renderer.domElement);
+            dragcontrols.enabled = false;
+            dragcontrols.addEventListener('hoveron', function (event) {
+                transformControls.attach(event.object);
+            });
+            var geometry1 = new THREE.BoxBufferGeometry(30, 30, 30);
+            var material1 = new THREE.LineBasicMaterial({ color: "blue" });
+            var cube1 = new THREE.Mesh(geometry1, material1);
+            cube1.position.set(-100, 0, 0);
+            cube1.name = "Cube1"
+            scene.add(cube1);
+            objects.push(cube1);
+            var cube2 = new THREE.Mesh(geometry1, material1);
+            cube2.position.set(0, 0, -100);
+            cube2.name = "Cube2"
+            scene.add(cube2);
+            objects.push(cube2);
+            var cube3 = new THREE.Mesh(geometry1, material1);
+            cube3.position.set(100, 0, 0);
+            cube3.name = "Cube3"
+            scene.add(cube3);
+            objects.push(cube3);
+            document.addEventListener('mousedown', onDocumentMouseDown);
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+        }
+        function onDocumentMouseDown(event) {
+            event.preventDefault();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            camera.lookAt(scene.position);
+            camera.updateMatrixWorld();
+            raycaster.setFromCamera(mouse, camera);
+            var intersects = raycaster.intersectObjects(objects);
+            if (intersects.length > 0) {
+                if (INTERSECTED != intersects[0].object) {
+                    if (INTERSECTED);
+                    {
+                        INTERSECTED = intersects[0].object;
+                    }
+                    selectedCube = INTERSECTED;
+                    console.log(selectedCube.position);
+                    transformControls.attach(INTERSECTED);
+                    window.clearInterval(moveInterval);
+                    scene.add(transformControls);
+                } else {
+                    if (INTERSECTED);
+                    {
+                        INTERSECTED = null;
+                    }
+                }
+            }
+        }
+
+        function loadCurve() {
+             var positions = [];
+                var newcubeObjects = [];
+				for ( var i = 0; i < noOfPoints; i ++ ) {
+					addCubeObject(newcubeObjects);
+				}
+				positions = [];
+				for ( var i = 0; i < noOfPoints; i ++ ) {
+					positions.push( newcubeObjects[ i ].position );
+				}
+                var geometry = new THREE.BufferGeometry();
+				geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( ARC_SEGMENTS * 3 ), 3 ) );
+				var curve = new THREE.CatmullRomCurve3( positions );
+				curve.curveType = 'catmullrom';
+				curve.mesh = new THREE.Line( geometry.clone(), new THREE.MeshLambertMaterial( {
+					color: 0xff0000,
+					opacity: 0.35
+				} ) );
+				curve.mesh.castShadow = true;
+                curveObjects.push(curve);
+                scene.add(curve.mesh);
+                var intersectPosition = INTERSECTED.position;
+                    
+                load( [ new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z), 
+                       new THREE.Vector3( intersectPosition.x+150, intersectPosition.y+150, intersectPosition.z+150 ),
+                       new THREE.Vector3( intersectPosition.x+50, intersectPosition.y+50, intersectPosition.z-50 )] , 
+                       curve, positions);
+            
+        }
+        function moveCube() {
+            var t = 0;
+            moveInterval = setInterval(function () {
+                pt = currentCurve.getPoint(t);
+                selectedCube.position.set(pt.x, pt.y, pt.z);
+                t = (t >= 1) ? 0 : t += 0.002;
+            }, 30);
+        }
+        function addCubeObject(newcubeObjects) {
+				var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+				var object = new THREE.Mesh( boxGeometry.clone(), material );
+				object.castShadow = true;
+				object.receiveShadow = true;
+				scene.add( object );
+				newcubeObjects.push( object );
+                allSmallCubeObjects.push( object );
+			}
+        
+        function load( new_positions , newCurve, old_positions) {
+				
+				for ( var i = 0; i < old_positions.length; i ++ ) {
+					old_positions[ i ].copy( new_positions[ i ] );
+				}
+				updateCubeOutline(newCurve);
+        }
+        
+        function updateCubeOutline(newCurve) {
+					
+					var newCurveMesh = newCurve.mesh;
+					var position = newCurveMesh.geometry.attributes.position;
+					for ( var i = 0; i < ARC_SEGMENTS; i ++ ) {
+						var t = i / ( ARC_SEGMENTS - 1 );
+						newCurve.getPoint( t, point );
+						position.setXYZ( i, point.x, point.y, point.z );
+					}
+					position.needsUpdate = true;
+				
+			}
+        function animate() {
+            requestAnimationFrame(animate);
+            render();
+        }
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+
+</body>
+
+</html>

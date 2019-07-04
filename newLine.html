@@ -26,7 +26,7 @@
     <script src="js/TransformControls.js"></script>
 
     <script>
-        var container, curve,currentCurve, t, INTERSECTED, raycaster, mouse, object;
+        var container, curve, currentCurve, t, INTERSECTED, raycaster, mouse, object;
         var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
         var curveObjects = [];
         var allSmallCubeObjects = [];
@@ -65,14 +65,14 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.update();
             controls.addEventListener('change', render);
-            transformControls = new THREE.TransformControls(camera, renderer.domElement,scene);
+            transformControls = new THREE.TransformControls(camera, renderer.domElement, scene);
             transformControls.addEventListener('change', render);
             transformControls.addEventListener('dragging-changed', function (event) {
                 controls.enabled = !event.value;
             });
             scene.add(transformControls);
             transformControls.addEventListener('objectChange', function () {
-                updateSplineOutline();
+                updateCubeOutline();
             });
             var dragcontrols = new THREE.DragControls(allSmallCubeObjects, camera, renderer.domElement);
             dragcontrols.enabled = false;
@@ -83,9 +83,10 @@
             var material1 = new THREE.LineBasicMaterial({ color: "blue" });
             var cube1 = new THREE.Mesh(geometry1, material1);
             cube1.position.set(-100, 0, 0);
-            cube1.name = "Cube1"
+            cube1.name = "cube1"
             scene.add(cube1);
             objects.push(cube1);
+
             var cube2 = new THREE.Mesh(geometry1, material1);
             cube2.position.set(0, 0, -100);
             cube2.name = "Cube2"
@@ -128,73 +129,94 @@
             }
         }
 
+        // function makeid(id) {
+        //     var text = "";
+        //     var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        //     for (var i = 0; i < id; i++)
+        //         text += possible.charAt(Math.floor(Math.random() * id));
+        //     return text;
+        // }
+
         function loadCurve() {
-             var positions = [];
-                var newcubeObjects = [];
-				for ( var i = 0; i < noOfPoints; i ++ ) {
-					addCubeObject(newcubeObjects);
-				}
-				positions = [];
-				for ( var i = 0; i < noOfPoints; i ++ ) {
-					positions.push( newcubeObjects[ i ].position );
-				}
-                var geometry = new THREE.BufferGeometry();
-				geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( ARC_SEGMENTS * 3 ), 3 ) );
-				var curve = new THREE.CatmullRomCurve3( positions );
-				curve.curveType = 'catmullrom';
-				curve.mesh = new THREE.Line( geometry.clone(), new THREE.MeshLambertMaterial( {
-					color: 0xff0000,
-					opacity: 0.35
-				} ) );
-				curve.mesh.castShadow = true;
-                curveObjects.push(curve);
-                scene.add(curve.mesh);
-                var intersectPosition = INTERSECTED.position;
-                    
-                load( [ new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z), 
-                       new THREE.Vector3( intersectPosition.x+150, intersectPosition.y+150, intersectPosition.z+150 ),
-                       new THREE.Vector3( intersectPosition.x+50, intersectPosition.y+50, intersectPosition.z-50 )] , 
-                       curve, positions);
-            
+            var positions = [];
+            var newcubeObjects = [];
+            for (var i = 0; i < noOfPoints; i++) {
+                addCubeObject(newcubeObjects);
+            }
+            positions = [];
+            for (var i = 0; i < noOfPoints; i++) {
+                positions.push(newcubeObjects[i].position);
+            }
+            var geometry = new THREE.BufferGeometry();
+            geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(ARC_SEGMENTS * 3), 3));
+            var curve = new THREE.CatmullRomCurve3(positions);
+            curve.curveType = 'catmullrom';
+            curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
+                color: 0xff0000,
+                opacity: 0.35
+            }));
+            // curve.mesh.castShadow = true;
+            curveObjects.push(curve);
+            curve.name = transformControls.object.name;
+            scene.add(curve.mesh);
+            var intersectPosition = INTERSECTED.position;
+
+            load([new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z),
+            new THREE.Vector3(intersectPosition.x + 150, intersectPosition.y + 150, intersectPosition.z + 150),
+            new THREE.Vector3(intersectPosition.x + 50, intersectPosition.y + 50, intersectPosition.z - 50)],
+                curve, positions);
+
         }
-        function moveCube() {
+
+        function addCubeObject(newcubeObjects) {
+            var material = new THREE.MeshLambertMaterial({ color: Math.random() * 0xffffff });
+            var object = new THREE.Mesh(boxGeometry.clone(), material);
+            object.castShadow = true;
+            object.receiveShadow = true;
+            scene.add(object);
+            newcubeObjects.push(object);
+            allSmallCubeObjects.push(object);
+        }
+
+        function load(new_positions, newCurve, old_positions) {
+
+            for (var i = 0; i < old_positions.length; i++) {
+                old_positions[i].copy(new_positions[i]);
+            }
+            updateCubeOutline(newCurve);
+        }
+
+        function updateCubeOutline(newCurve) {
+            for (var k in curveObjects) {
+                newCurve = curveObjects[k];
+                var newCurveMesh = newCurve.mesh;
+                var position = newCurveMesh.geometry.attributes.position;
+                for (var i = 0; i < ARC_SEGMENTS; i++) {
+                    var t = i / (ARC_SEGMENTS - 1);
+                    newCurve.getPoint(t, point);
+                    position.setXYZ(i, point.x, point.y, point.z);
+                }
+                position.needsUpdate = true;
+            }
+
+        }
+
+        function moveCube(newCurve) {
             var t = 0;
             moveInterval = setInterval(function () {
-                pt = currentCurve.getPoint(t);
-                selectedCube.position.set(pt.x, pt.y, pt.z);
-                t = (t >= 1) ? 0 : t += 0.002;
+                cubeObject = transformControls.object;
+                for (var k = 0; k < curveObjects.length; k++) {
+                    if (cubeObject.name == curve.name) {
+                        newCurve = curveObjects[k];
+                        pt = newCurve.getPoint(t);
+                        selectedCube.position.set(pt.x, pt.y, pt.z);
+                        t = (t >= 1) ? 0 : t += 0.002;
+                    }
+                }
             }, 30);
         }
-        function addCubeObject(newcubeObjects) {
-				var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
-				var object = new THREE.Mesh( boxGeometry.clone(), material );
-				object.castShadow = true;
-				object.receiveShadow = true;
-				scene.add( object );
-				newcubeObjects.push( object );
-                allSmallCubeObjects.push( object );
-			}
-        
-        function load( new_positions , newCurve, old_positions) {
-				
-				for ( var i = 0; i < old_positions.length; i ++ ) {
-					old_positions[ i ].copy( new_positions[ i ] );
-				}
-				updateCubeOutline(newCurve);
-        }
-        
-        function updateCubeOutline(newCurve) {
-					
-					var newCurveMesh = newCurve.mesh;
-					var position = newCurveMesh.geometry.attributes.position;
-					for ( var i = 0; i < ARC_SEGMENTS; i ++ ) {
-						var t = i / ( ARC_SEGMENTS - 1 );
-						newCurve.getPoint( t, point );
-						position.setXYZ( i, point.x, point.y, point.z );
-					}
-					position.needsUpdate = true;
-				
-			}
+
+
         function animate() {
             requestAnimationFrame(animate);
             render();

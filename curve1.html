@@ -27,14 +27,14 @@
 
     <script>
 
-        var container, curve, spline, t, INTERSECTED, raycaster, mouse, object;
+        var container, curve, spline, t, INTERSECTED, raycaster, mouse, object, curve;
         var camera, scene, renderer, selectedCube, curveLoad, moveInterval, transformControls;
         var splineHelperObjects = [];
         var splinePointsLength = 3;
         var curveObjects = [];
-        var allSmallCubeObjects = [];
+        //var allSmallCubeObjects = [];
         //var noOfPoints = 3;
-        //var positions = [];
+        var positions = [];
         var ARC_SEGMENTS = 100;
         var point = new THREE.Vector3();
         var splines = {};
@@ -97,7 +97,6 @@
             dragcontrols.addEventListener('hoveron', function (event) {
                 transformControls.attach(event.object);
             });
-
 
             var geometry1 = new THREE.BoxBufferGeometry(60, 60, 60);
             var material1 = new THREE.LineBasicMaterial({ color: "blue" });
@@ -168,13 +167,14 @@
         function loadCurve() {
 
             //curveWithPoints();
-            var positions = [];
+            //var positions = [];
             var newcubeObjects = [];
 
             for (var i = 0; i < splinePointsLength; i++) {
                 addSplineObject(newcubeObjects);
             }
 
+            positions = [];
             for (var i = 0; i < splinePointsLength; i++) {
                 positions.push(newcubeObjects[i].position);
                 //console.log(positions);
@@ -190,22 +190,16 @@
                 color: 0xff0000,
                 opacity: 1
             }));
-
-            splines.Catmullrom = curve;
-
-            for (var k in splines) {
-                spline = splines[k];
-                scene.add(spline.mesh);
-            }
-
+            curveObjects.push(curve);
+            scene.add(curve.mesh);
 
             var intersectPosition = INTERSECTED.position;
             load([new THREE.Vector3(intersectPosition.x, intersectPosition.y, intersectPosition.z),
             //new THREE.Vector3(-200, 0, 0),
             new THREE.Vector3(0, 200, 0),
             new THREE.Vector3(200, 0, 0),
-            ], curve, positions);
-            console.log(Object.keys(splines).length);
+            ]);
+
         }
 
 
@@ -219,67 +213,31 @@
             splineHelperObjects.push(object);
         }
 
-        function load(new_positions, newCurve, old_positions) {
+        function load(new_positions) {
 
-            for (var i = 0; i < old_positions.length; i++) {
-                old_positions[i].copy(new_positions[i]);
+            for (var i = 0; i < positions.length; i++) {
+                positions[i].copy(new_positions[i]);
             }
-            updateSplineOutline(newCurve);
+
+            updateSplineOutline();
+            //console.log(splineHelperObjects);
         }
 
-
-        function updateSplineOutline(newCurve) {
-            for (var k in splines) {
-                spline = splines[k];
-                var splineMesh = spline.mesh;
-                var position1 = splineMesh.geometry.attributes.position;
+        function updateSplineOutline() {
+                for (var k in curveObjects){
+                    curves = curveObjects[k];
+            var newCurveMesh = curves.mesh;
+            var position = newCurveMesh.geometry.attributes.position;
+           
                 for (var i = 0; i < ARC_SEGMENTS; i++) {
-                    t = i / (ARC_SEGMENTS - 1);
-                    // console.log(t);
-                    spline.getPoint(t, point);
-                    position1.setXYZ(i, point.x, point.y, point.z);
-                    //console.log(point);
+                    var t = i / (ARC_SEGMENTS - 1);
+                    curves.getPoint(t, point);
+                    position.setXYZ(i, point.x, point.y, point.z);
                 }
-                position1.needsUpdate = true;
+                position.needsUpdate = true;
             }
+
         }
-
-
-        var curveWithPoints = (function () {
-            var executed = false;
-            return function () {
-                if (!executed) {
-                    executed = true;
-                    // // // do something
-                    // for (var i = 0; i < splinePointsLength; i++) {
-                    //     addSplineObject();
-                    // }
-
-                    // for (var i = 0; i < splinePointsLength; i++) {
-                    //     positions.push(splineHelperObjects[i].position);
-                    //     //console.log(positions);
-                    // }
-
-                    // var geometry = new THREE.BufferGeometry();
-                    // var vertices = new Float32Array(ARC_SEGMENTS * 3); //3 vertices per point
-                    // // itemSize = 3 because there are 3 values (components) per vertex
-                    // geometry.addAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
-                    // curve = new THREE.CatmullRomCurve3(positions);
-                    // console.log(positions);
-                    // curve.mesh = new THREE.Line(geometry.clone(), new THREE.MeshLambertMaterial({
-                    //     color: 0xff0000,
-                    //     opacity: 1
-                    // }));
-
-                    // splines.Catmullrom = curve;
-                    // for (var k in splines) {
-                    //     spline = splines[k];
-                    //     scene.add(spline.mesh);
-                    // }
-                }
-            };
-        })();
 
 
 

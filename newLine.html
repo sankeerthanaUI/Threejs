@@ -201,12 +201,12 @@
 
         }
 
-        function moveCube(newCurve) {
+         function moveCube(newCurve) {
             var t = 0;
             moveInterval = setInterval(function () {
                 cubeObject = transformControls.object;
                 for (var k = 0; k < curveObjects.length; k++) {
-                    if (cubeObject.name == curve.name) {
+                    if (cubeObject.name == curveObjects[k].name) {
                         newCurve = curveObjects[k];
                         pt = newCurve.getPoint(t);
                         selectedCube.position.set(pt.x, pt.y, pt.z);

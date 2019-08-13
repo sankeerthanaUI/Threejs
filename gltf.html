@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <!-- <button onclick="playAnimation()">Play</button> -->
+
+
+    <script src="js/three.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/TransformControls.js"></script>
+    <script src="js/GLTFLoader.js"></script>
+
+    <script>
+
+        var scene, renderer, camera, light, gridHelper, controls, raycaster, mouse, INTERSECTED, group, animationObj, gltfObj;
+        var clock = new THREE.Clock();
+        var mixer, group;
+        var mixers = [];
+        var objects = [];
+
+        init();
+        render();
+        animate();
+
+        function init() {
+
+            scene = new THREE.Scene()
+            scene.background = new THREE.Color(0xffffff);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 3000);
+            camera.position.set(0, 500, 1400);
+            camera.lookAt(0, 200, 0);
+
+            light = new THREE.DirectionalLight("white", 1);
+            light.position.set(1, 1, 1);
+            scene.add(light);
+
+            gridHelper = new THREE.GridHelper(1000, 30, 0x444444, 0xC0C0C0);
+            scene.add(gridHelper);
+
+            // var axisHelper = new THREE.AxesHelper(100);
+            // scene.add(axisHelper);
+
+            var array = gridHelper.geometry.attributes.color.array;
+
+            for (var i = 0; i < array.length; i += 60) {
+
+                for (var j = 0; j < 12; j++) {
+                    array[i + j] = 0.5;
+                }
+            }
+
+            group = new THREE.Object3D();
+            // var texture = new THREE.TextureLoader().load("img/texture.jpg");
+            // texture.repeat.set(1, 1);
+
+            var loader = new THREE.GLTFLoader();
+            loader.load('models/gltfModels/Myca/model.gltf', function (gltf) {
+
+                //console.log("Plugxr", object);
+                var object = gltf.scene;
+                console.log(object);
+
+                // var box = new THREE.BoxHelper(object);
+                // box.geometry.computeBoundingBox();
+                // console.log(box.geometry.boundingBox);
+                // var bb = box.geometry.boundingBox;
+                // var objHeight = bb.max.y - bb.min.y;
+                // console.log(objHeight);
+
+                object.traverse(function (child) {
+                    if (child instanceof THREE.Mesh) {
+                        //child.geometry.center();
+                        //console.log(child.geometry);
+                    }
+                });
+
+                // objAnimation = gltf.animations;
+                // group = new THREE.Object3D();
+                var objLength = [];
+                // group.animations = objAnimation;
+
+                for (var c = 0; c < object.children.length; c++) {
+
+                    objLength.push(object.children[c]);
+                }
+
+                for (var c = 0; c < objLength.length; c++) {
+                    new THREE.Box3().setFromObject(objLength[c]).getCenter(objLength[c].position).multiplyScalar(-1);
+                    //    objLength[c].position.y = -1
+                    console.log(new THREE.Box3().setFromObject(objLength[c]));
+                    group.add(objLength[c]);
+
+                }
+                group.name = "crocodile";
+                //group.name = makeid(5);
+                //names.push(group.name);
+                //id = makeid(5);
+                group.scale.set(25, 25, 25);
+                //group.position.y = 100;
+
+                scene.add(group);
+                objects.push(group);
+                console.log(group);
+                // object.scale.set(25, 25, 25);
+                // scene.add(object);
+            },
+
+                function (xhr) {
+
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+
+                },
+                // called when loading has errors
+                function (error) {
+
+                    console.log('An error happened' + error);
+
+                }
+            );
+
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.update();
+            controls.addEventListener('change', render);
+
+
+            transformControls = new THREE.TransformControls(camera, renderer.domElement);
+            transformControls.addEventListener('change', render);
+
+            transformControls.addEventListener('dragging-changed', function (event) {
+                controls.enabled = !event.value;
+
+            });
+
+            scene.add(transformControls);
+
+        }
+
+        // function playAnimation() {
+        // mixer = new THREE.AnimationMixer(animationObj);
+        // mixers.push(mixer);
+        // var action = mixer.clipAction(gltfObj.animations[0]);
+        // action.play();
+
+        // }
+        function animate() {
+            requestAnimationFrame(animate);
+
+            var delta = clock.getDelta();
+            // if (mixer) mixer.update(delta);
+            if (mixers.length > 0) {
+                for (var i = 0; i < mixers.length; i++) {
+                    mixers[i].update(delta);
+                }
+            }
+            render();
+        }
+
+        function render() {
+
+            renderer.render(scene, camera);
+            // animate();
+
+        }
+
+
+    </script>
+
+
+
+</body>
+
+</html>
